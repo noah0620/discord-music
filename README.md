@@ -1,16 +1,42 @@
+# Discord MusicBot - GitHub / Railway 完成版
 
+音楽再生だけの1台用BOTです。
 
-## Windows `python3: No such file or directory` 修正
-この版では `youtube-dl-exec` のインストール時Pythonチェックを回避する設定を追加しました。
-ZIPに含まれていた `node_modules` は削除してあります。Windows上で必ず依存関係を入れ直してください。
+## GitHubへアップロード
+このZIPの中身をリポジトリ直下へアップロードしてください。
 
-PowerShell:
+**`.env` とBOT TokenはGitHubへアップロードしないでください。**
+
+## Railway
+GitHubリポジトリをRailwayへ接続し、Variablesに次を追加します。
+
+`DISCORD_TOKEN=BOTのトークン`
+
+この版には `Dockerfile` と `railway.json` が入っています。
+RailwayのLinux環境へ `python3` を明示的に導入するため、
+以前の `env: python3: No such file or directory` を回避します。
+
+Start Command: `npm start`
+
+## Discordコマンド登録
+ローカルPowerShellで `.env` にTokenを設定して一度だけ:
+
 ```powershell
-$env:YOUTUBE_DL_SKIP_PYTHON_CHECK="1"
 npm install
-npm start
+npm run deploy
 ```
 
-または `Windows_初回セットアップ.ps1` → `Windows_起動.ps1` の順に実行してください。
+その後Railwayでは `npm start` だけで常時起動します。
 
-既存フォルダへ上書きする場合は、古い `node_modules` を削除してから `npm install` してください。
+## 音楽機能
+- /play
+- /pause
+- /resume
+- /skip
+- /stop
+- /queue
+- /nowplaying
+- /volume
+- /leave
+- 再生パネル
+- VCが無人になったら自動退出

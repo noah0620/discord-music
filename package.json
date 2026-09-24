@@ -1,14 +1,12 @@
 {
-  "name": "discord-multibot-v5-14-5-auto-watchers-fixed",
-  "version": "6.0.0",
-  "description": "Discord MultiBot v5.9 - enhanced vending, purchase tickets, sales feed and social profile RSS.",
+  "name": "discord-music-only-stable",
+  "version": "1.0.0",
+  "description": "Music-only Discord bot extracted and stabilized from the supplied MultiBot",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "deploy-commands": "node src/deploy-commands.js",
-    "clear-commands": "node src/clear-commands.js",
-    "preinstall": "node -e \"console.log('Installing music bot dependencies...')\""
+    "deploy": "node src/deploy.js"
   },
   "engines": {
     "node": ">=20"
@@ -20,7 +18,6 @@
     "ffmpeg-static": "^5.2.0",
     "opusscript": "^0.1.1",
     "libsodium-wrappers": "^0.7.15",
-    "rss-parser": "^3.13.0",
     "youtube-dl-exec": "^3.1.15"
   }
 }
