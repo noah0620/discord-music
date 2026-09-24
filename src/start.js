@@ -56,7 +56,7 @@ catch{
  catch(e){console.error('❌ Lavalink.jarの取得に失敗:',e.message);process.exit(1);}
 }
 console.log('🎵 Lavalinkを起動しています...');
-const lava=spawn('java',['-jar',jar,'--spring.config.location='+path.join(root,'application.yml')],{cwd:root,stdio:'inherit',env:{...process.env,LAVALINK_PASSWORD:password}});
+const lava=spawn('java',['-Dspring.cloud.config.enabled=false','-Dspring.cloud.config.import-check.enabled=false','-jar',jar,'--spring.config.location='+path.join(root,'application.yml')],{cwd:root,stdio:'inherit',env:{...process.env,LAVALINK_PASSWORD:password}});
 lava.on('error',e=>{console.error('❌ Lavalink起動失敗:',e);process.exit(1);});
 console.log('⏳ Lavalink :2333 を待っています...');
 if(!await waitLavalink()){
