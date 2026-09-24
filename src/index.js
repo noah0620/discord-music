@@ -53,7 +53,8 @@ function panel(){
 async function resolveTrack(input){
   const target=/^https?:\/\//i.test(input)?input:`ytsearch1:${input}`;
   const info=await youtubedl(target,{
-    dumpSingleJson:true,noPlaylist:true,skipDownload:true,noWarnings:true
+    dumpSingleJson:true,noPlaylist:true,skipDownload:true,noWarnings:true,
+    extractorArgs:'youtube:player_client=android,web'
   });
   const row=Array.isArray(info?.entries)?info.entries[0]:info;
   if(!row) throw new Error('曲が見つかりませんでした。');
@@ -64,7 +65,8 @@ async function resolveTrack(input){
 
 async function getFreshStreamUrl(pageUrl){
   const stream=await youtubedl(pageUrl,{
-    getUrl:true,format:'bestaudio/best',noPlaylist:true,noWarnings:true
+    getUrl:true,format:'bestaudio/best',noPlaylist:true,noWarnings:true,
+    extractorArgs:'youtube:player_client=android,web'
   });
   const url=String(stream).trim().split(/\r?\n/).find(x=>/^https?:\/\//.test(x));
   if(!url) throw new Error('音声ストリームURLを取得できませんでした。');
@@ -253,16 +255,27 @@ client.on(Events.InteractionCreate,async i=>{
     const name=i.commandName;
 
     if(name==='play'){
-      const vc=i.member?.voice?.channel;
-      if(!vc) return safeReply(i,ephemeral('❌ 先にボイスチャンネルへ参加してください。'));
+      // DiscordはInteractionへの初回応答を約3秒以内に要求するため、
+      // YouTube検索やVC接続より先に必ずdeferする。
+      try{
+        if(!i.deferred&&!i.replied) await i.deferReply();
+      }catch(e){
+        // 同じBOTをRailwayとPCなど2か所で同時起動すると、片方が先に応答して
+        // 10062/40060になる。ここではプロセスを落とさない。
+        if(e?.code===10062||e?.code===40060){
+          console.warn(`⚠️ /play Interaction ${e.code}: 同一BOTの二重起動を確認してください。`);
+          return;
+        }
+        throw e;
+      }
 
-      await i.deferReply();
+      const vc=i.member?.voice?.channel;
+      if(!vc) return i.editReply('❌ 先にボイスチャンネルへ参加してください。');
+
       try{
         const track=await resolveTrack(i.options.getString('query',true));
         const s=await getSession(i.guild,vc);
         s.queue.push(track);
-
-        // 再生開始できることを確認してからパネルを表示。
         if(!s.playing) await playNext(i.guildId);
 
         return await i.editReply({
@@ -275,7 +288,12 @@ client.on(Events.InteractionCreate,async i=>{
         });
       }catch(e){
         console.error('/play:',e);
-        return i.editReply(`❌ 再生に失敗しました。\n${String(e.message||e).slice(0,1200)}`);
+        const raw=String(e?.stderr||e?.message||e);
+        const youtubeBlocked=/Sign in to confirm you.re not a bot|cookies-from-browser|authentication/i.test(raw);
+        const msg=youtubeBlocked
+          ? '❌ YouTube側で音声取得が拒否されました。BOT自体は正常です。Railway等のサーバーIPではYouTubeの自動判定で取得できない場合があります。別のYouTube URLでも同じ場合は、実行環境側の制限です。'
+          : `❌ 再生に失敗しました。\n${raw.slice(0,1200)}`;
+        return i.editReply(msg).catch(()=>{});
       }
     }
 

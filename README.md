@@ -40,3 +40,12 @@ npm run deploy
 - /leave
 - 再生パネル
 - VCが無人になったら自動退出
+
+## 10062 / 40060 と YouTube取得エラー対策
+- `/play` はYouTube検索より前に `deferReply()` して、Discordの3秒制限に対応。
+- 10062 / 40060 が起きてもプロセスを終了しない。
+- YouTube取得は `android,web` player clientを試す構成。
+- YouTubeが `Sign in to confirm you're not a bot` を返した場合は、BOTを落とさずDiscordへ原因を表示。
+
+### 重要
+同じ `DISCORD_TOKEN` のBOTを **PCとRailwayで同時起動しないでください**。同じInteractionを2プロセスが受け取り、10062/40060の原因になります。Railway運用時はPC側の `npm start` を `Ctrl+C` で停止してください。
