@@ -45,24 +45,27 @@ function fmt(ms=0){
 function buttons(player){
  const paused=!!player?.paused;
  return new ActionRowBuilder().addComponents(
-  new ButtonBuilder()
-   .setCustomId(paused?'music:resume':'music:play')
-   .setLabel(paused?'▶ 再開':'▶ 再生')
-   .setStyle(ButtonStyle.Success),
   new ButtonBuilder().setCustomId('music:pause').setLabel('⏸ 一時停止').setStyle(ButtonStyle.Secondary),
+  new ButtonBuilder().setCustomId(paused?'music:resume':'music:play').setLabel(paused?'▶ 再開':'▶ 再生').setStyle(ButtonStyle.Success),
   new ButtonBuilder().setCustomId('music:skip').setLabel('⏭ スキップ').setStyle(ButtonStyle.Primary),
-  new ButtonBuilder().setCustomId('music:shuffle').setLabel('🔀 シャッフル').setStyle(ButtonStyle.Secondary),
-  new ButtonBuilder().setCustomId('music:stop').setLabel('⏹ 停止').setStyle(ButtonStyle.Danger)
+  new ButtonBuilder().setCustomId('music:stop').setLabel('⏹ 停止').setStyle(ButtonStyle.Danger),
+  new ButtonBuilder().setCustomId('music:leave').setLabel('🚪 退出').setStyle(ButtonStyle.Danger)
  );
 }
 function embed(player,track){
- const q=player?.queue?.length??0;
- const uri=track?.uri||track?.realUri||'';
- const author=track?.author?`\nアーティスト: **${track.author}**`:'';
+ const t=track||player?.queue?.current;
+ const title=t?.title||'再生待機中';
+ const uri=t?.uri||t?.realUri||'';
+ const vc=player?.voiceId?`<#$${player.voiceId}>`.replace('$',''):'未接続';
  return new EmbedBuilder()
-  .setTitle(`🎵 ${client.user.username}`)
-  .setDescription(`**${track?.title||'再生中'}**${author}${uri?`\n${uri}`:''}\n\nVC: 🔊 <#${player.voiceId}>\nキュー: **${q}曲** | 音量: **${player.volume??100}%**`)
-  ;
+  .setTitle('🎵 Music BOT 1')
+  .setDescription([
+   `**${title}**`,
+   uri ? uri : null,
+   '',
+   `VC: 🔊 ${vc}`,
+   `キュー: ${player?.queue?.size||0}曲　音量:${player?.volume??70}%`
+  ].filter(Boolean).join('\n'));
 }
 async function updatePanel(player,track){
  const ch=client.channels.cache.get(player.textId);
@@ -74,13 +77,13 @@ async function updatePanel(player,track){
   if(old) keep=await ch.messages.fetch(old).catch(()=>null);
   if(!keep){
    const recent=await ch.messages.fetch({limit:25}).catch(()=>null);
-   keep=recent?.find(m=>m.author?.id===client.user.id && m.embeds?.[0]?.title===`🎵 ${client.user.username}`) || null;
+   keep=recent?.find(m=>m.author?.id===client.user.id && (m.embeds?.[0]?.title===`🎵 ${client.user.username}` || m.embeds?.[0]?.title==='🎵 Music BOT 1')) || null;
   }
   if(keep){
    await keep.edit(payload);
    panelMessages.set(player.guildId,keep.id);
    const recent=await ch.messages.fetch({limit:25}).catch(()=>null);
-   const duplicates=recent?.filter(m=>m.id!==keep.id && m.author?.id===client.user.id && m.embeds?.[0]?.title===`🎵 ${client.user.username}`);
+   const duplicates=recent?.filter(m=>m.id!==keep.id && m.author?.id===client.user.id && (m.embeds?.[0]?.title===`🎵 ${client.user.username}` || m.embeds?.[0]?.title==='🎵 Music BOT 1'));
    if(duplicates) for(const m of duplicates.values()) await m.delete().catch(()=>{});
    return;
   }
@@ -156,8 +159,8 @@ music.on('playerException',async (player,data)=>{
     await updatePanel(player,alt);
     return;
    }
-   const ch=client.channels.cache.get(player.textId);
-   ch?.send('❌ YouTube側で音声取得が拒否され、SoundCloudにも代替音源が見つかりませんでした。').catch(()=>{});
+   console.warn('YouTube playback rejected and no SoundCloud fallback was found.');
+   await updatePanel(player,failed ? {title:failed.title,uri:failed.uri,author:failed.author} : player.queue.current);
   } finally {
    setTimeout(()=>fallbackInProgress.delete(player.guildId),3000);
   }
@@ -208,15 +211,6 @@ client.on(Events.InteractionCreate,async i=>{
   if(!i.isChatInputCommand())return;
 
   // Discordの3秒制限対策。重い検索より先に必ずACKする。
-  try{
-   await i.deferReply();
-  }catch(e){
-   if(e?.code===40060||e?.code===10062){
-    console.warn(`Interaction ACK failed/expired: ${e.code}`);
-    return;
-   }
-   throw e;
-  }
 
   if(i.commandName==='play'){
    const vc=i.member?.voice?.channel;
@@ -277,9 +271,19 @@ client.on(Events.InteractionCreate,async i=>{
  }catch(e){
   console.error('Interaction:',e);
   const msg=`❌ 処理に失敗しました。\n${String(e?.message||e).slice(0,1200)}`;
-  if(i.deferred||i.replied)await i.editReply(msg).catch(()=>{});
+  if(i.deferred||i.replied)await respond(i,msg).catch(()=>{});
   else await safe(i,eph(msg)).catch(()=>{});
  }
 });
 
-client.login(token);
+client.login(token);async function respond(i,payload){
+ try{
+  if(i.deferred||i.replied) return await respond(i,payload);
+  return await i.reply(payload);
+ }catch(e){
+  if(e?.code===10062||e?.code===40060){console.warn(`Interaction ${e.code} ignored`);return;}
+  console.error('Interaction response:',e);
+ }
+}
+
+
