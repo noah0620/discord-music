@@ -30,3 +30,19 @@ Variables に以下を設定:
 Start Command: `npm start`
 
 本物のTokenをGitHubへアップロードしないでください。
+
+
+## 再生パネル
+`/play 曲名またはURL` を実行すると、再生開始処理の後にDiscord上へ以下を表示します。
+
+- 🎵 BOT名
+- 曲名
+- YouTube URL
+- 再生中のVC
+- ⏸ 一時停止
+- ▶ 再開
+- ⏭ スキップ
+- ⏹ 停止
+- 🚪 退出
+
+3台それぞれのパネルはBOT IDで分離されているため、別BOTのボタンには反応しません。
