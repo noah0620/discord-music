@@ -11,6 +11,10 @@ server:
 
 lavalink:
   server:
+    bufferDurationMs: 400
+    frameBufferDurationMs: 5000
+    opusEncodingQuality: 10
+    resamplingQuality: LOW
     password: "${LAVALINK_PASSWORD:change-me}"
     sources:
       youtube: false

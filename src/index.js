@@ -44,11 +44,14 @@ function fmt(ms=0){
 function buttons(player){
  const paused=!!player?.paused;
  return new ActionRowBuilder().addComponents(
-  new ButtonBuilder().setCustomId(paused?'music:resume':'music:pause').setLabel(paused?'▶ 再開':'⏸ 一時停止').setStyle(paused?ButtonStyle.Success:ButtonStyle.Secondary),
+  new ButtonBuilder()
+   .setCustomId(paused?'music:resume':'music:play')
+   .setLabel(paused?'▶ 再開':'▶ 再生')
+   .setStyle(ButtonStyle.Success),
+  new ButtonBuilder().setCustomId('music:pause').setLabel('⏸ 一時停止').setStyle(ButtonStyle.Secondary),
   new ButtonBuilder().setCustomId('music:skip').setLabel('⏭ スキップ').setStyle(ButtonStyle.Primary),
   new ButtonBuilder().setCustomId('music:shuffle').setLabel('🔀 シャッフル').setStyle(ButtonStyle.Secondary),
-  new ButtonBuilder().setCustomId('music:stop').setLabel('⏹ 停止').setStyle(ButtonStyle.Danger),
-  new ButtonBuilder().setCustomId('music:leave').setLabel('🚪 退出').setStyle(ButtonStyle.Danger)
+  new ButtonBuilder().setCustomId('music:stop').setLabel('⏹ 停止').setStyle(ButtonStyle.Danger)
  );
 }
 function embed(player,track){
@@ -58,7 +61,7 @@ function embed(player,track){
  return new EmbedBuilder()
   .setTitle(`🎵 ${client.user.username}`)
   .setDescription(`**${track?.title||'再生中'}**${author}${uri?`\n${uri}`:''}\n\nVC: 🔊 <#${player.voiceId}>\nキュー: **${q}曲** | 音量: **${player.volume??100}%**`)
-  .setFooter({text:'Jockie Music風・Lavalink再生エンジン'});
+  ;
 }
 async function updatePanel(player,track){
  const ch=client.channels.cache.get(player.textId);
@@ -115,7 +118,20 @@ music.shoukaku.on('ready',name=>console.log(`✅ Lavalink ${name}: Ready`));
 music.shoukaku.on('error',(name,e)=>console.error(`❌ Lavalink ${name}:`,e));
 music.shoukaku.on('close',(name,code,reason)=>console.warn(`Lavalink ${name} closed ${code}: ${reason||''}`));
 
-music.on('playerStart',(player,track)=>updatePanel(player,track));
+music.on('playerStart',(player,track)=>{
+ console.log(`▶ 再生開始: ${track?.title||'unknown'} / guild=${player.guildId}`);
+ updatePanel(player,track);
+});
+music.on('playerStuck',(player,data)=>{
+ console.error('❌ Lavalink playerStuck:',data);
+ const ch=client.channels.cache.get(player.textId);
+ ch?.send(`❌ 音声ストリームが停止しました。${data?.threshold ? ` threshold=${data.threshold}` : ''}`).catch(()=>{});
+});
+music.on('playerException',(player,data)=>{
+ console.error('❌ Lavalink playerException:',data);
+ const ch=client.channels.cache.get(player.textId);
+ ch?.send('❌ Lavalinkで音声再生エラーが発生しました。コンソールログを確認してください。').catch(()=>{});
+});
 music.on('playerEnd',(player)=>updatePanel(player,player.queue.current).catch(()=>{}));
 music.on('playerEmpty',player=>{
  const ch=client.channels.cache.get(player.textId);
@@ -142,6 +158,12 @@ client.on(Events.InteractionCreate,async i=>{
    const p=playerFor(i);
    if(!p)return safe(i,eph('❌ BOTと同じボイスチャンネルに参加してください。'));
    const a=i.customId.split(':')[1];
+   if(a==='play'){
+    if(p.paused) await p.pause(false);
+    else if(!p.playing && p.queue.current) await p.play();
+    await updatePanel(p,p.queue.current);
+    return safe(i,eph('▶ 再生しました。'));
+   }
    if(a==='pause'){await p.pause(true);await updatePanel(p,p.queue.current);return safe(i,eph('⏸ 一時停止しました。'));}
    if(a==='resume'){await p.pause(false);await updatePanel(p,p.queue.current);return safe(i,eph('▶ 再開しました。'));}
    if(a==='skip'){await p.skip();return safe(i,eph('⏭ スキップしました。'));}
@@ -179,7 +201,9 @@ client.on(Events.InteractionCreate,async i=>{
    }
    const track=result.tracks[0];
    p.queue.add(track);
-   if(!p.playing&&!p.paused)await p.play();
+   if (!p.playing && !p.paused) {
+    await p.play();
+   }
    await updatePanel(p,p.queue.current||track);
    return i.editReply(p.queue.length?`➕ **${track.title}** をキューへ追加しました。`:`▶ **${track.title}** を再生します。`);
   }

@@ -51,3 +51,8 @@ Lavalink 4.2.2 + 公式 youtube-source 1.18.2 を使用します。
 
 ## Windows 自動起動修正
 Java 17以上が入っていれば `npm start` だけで Lavalink.jar を自動取得・起動し、2333番ポートの準備完了後にDiscord BOTを起動します。
+
+
+## 音が出ない場合
+この版では再生/再開ボタンを常時表示し、Lavalinkの playerStuck / playerException をコンソールへ出します。
+BOTに接続・発言権限があること、Discord側でBOTをミュートしていないことも確認してください。
