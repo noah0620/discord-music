@@ -26,6 +26,7 @@ const music=new Kazagumo({
 
 const panelMessages=new Map();
 const emptyTimers=new Map();
+const fallbackInProgress=new Set();
 
 const eph=content=>({content,flags:MessageFlags.Ephemeral});
 async function safe(i,p){
@@ -66,12 +67,22 @@ function embed(player,track){
 async function updatePanel(player,track){
  const ch=client.channels.cache.get(player.textId);
  if(!ch?.isTextBased()) return;
- const old=panelMessages.get(player.guildId);
  const payload={embeds:[embed(player,track||player.queue.current)],components:[buttons(player)]};
  try{
-  if(old){
-   const msg=await ch.messages.fetch(old).catch(()=>null);
-   if(msg){await msg.edit(payload);return;}
+  let keep=null;
+  const old=panelMessages.get(player.guildId);
+  if(old) keep=await ch.messages.fetch(old).catch(()=>null);
+  if(!keep){
+   const recent=await ch.messages.fetch({limit:25}).catch(()=>null);
+   keep=recent?.find(m=>m.author?.id===client.user.id && m.embeds?.[0]?.title===`🎵 ${client.user.username}`) || null;
+  }
+  if(keep){
+   await keep.edit(payload);
+   panelMessages.set(player.guildId,keep.id);
+   const recent=await ch.messages.fetch({limit:25}).catch(()=>null);
+   const duplicates=recent?.filter(m=>m.id!==keep.id && m.author?.id===client.user.id && m.embeds?.[0]?.title===`🎵 ${client.user.username}`);
+   if(duplicates) for(const m of duplicates.values()) await m.delete().catch(()=>{});
+   return;
   }
   const msg=await ch.send(payload);
   panelMessages.set(player.guildId,msg.id);
@@ -81,10 +92,10 @@ async function searchWithFallback(query,user){
  // URLはそのまま。曲名検索はYouTube→SoundCloudの順に試す。
  const isUrl=/^https?:\/\//i.test(query);
  if(isUrl) return music.search(query,{requester:user});
- let r=await music.search(query,{requester:user,source:'ytsearch:'}).catch(()=>null);
+ let r=await music.search(query,{requester:user,source:'ytsearch'}).catch(()=>null);
  if(r?.tracks?.length) return r;
  console.warn('YouTube search failed/empty. Trying SoundCloud...');
- r=await music.search(query,{requester:user,source:'scsearch:'}).catch(()=>null);
+ r=await music.search(query,{requester:user,source:'scsearch'}).catch(()=>null);
  return r;
 }
 function playerFor(i){
@@ -127,15 +138,37 @@ music.on('playerStuck',(player,data)=>{
  const ch=client.channels.cache.get(player.textId);
  ch?.send(`❌ 音声ストリームが停止しました。${data?.threshold ? ` threshold=${data.threshold}` : ''}`).catch(()=>{});
 });
-music.on('playerException',(player,data)=>{
+music.on('playerException',async (player,data)=>{
  console.error('❌ Lavalink playerException:',data);
+ const failed=data?.track?.info;
+ const message=String(data?.exception?.message||'');
+ const youtubeBlocked=failed?.sourceName==='youtube' && /login|not a bot|All clients failed|supported audio streams/i.test(message);
+ if(youtubeBlocked && !fallbackInProgress.has(player.guildId)){
+  fallbackInProgress.add(player.guildId);
+  try{
+   const q=[failed?.title,failed?.author].filter(Boolean).join(' ');
+   console.log(`↪ YouTube音声取得失敗。SoundCloudへフォールバック: ${q}`);
+   const r=await music.search(q,{source:'scsearch'}).catch(e=>{console.error('SoundCloud fallback search:',e);return null;});
+   const alt=r?.tracks?.[0];
+   if(alt){
+    player.queue.add(alt,0);
+    if(!player.playing) await player.play();
+    await updatePanel(player,alt);
+    return;
+   }
+   const ch=client.channels.cache.get(player.textId);
+   ch?.send('❌ YouTube側で音声取得が拒否され、SoundCloudにも代替音源が見つかりませんでした。').catch(()=>{});
+  } finally {
+   setTimeout(()=>fallbackInProgress.delete(player.guildId),3000);
+  }
+  return;
+ }
  const ch=client.channels.cache.get(player.textId);
- ch?.send('❌ Lavalinkで音声再生エラーが発生しました。コンソールログを確認してください。').catch(()=>{});
+ ch?.send('❌ 音声再生に失敗しました。PowerShellの playerException を確認してください。').catch(()=>{});
 });
 music.on('playerEnd',(player)=>updatePanel(player,player.queue.current).catch(()=>{}));
 music.on('playerEmpty',player=>{
- const ch=client.channels.cache.get(player.textId);
- ch?.send('✅ キューの再生が終了しました。').catch(()=>{});
+ updatePanel(player,null).catch(()=>{});
 });
 music.on('playerDestroy',player=>{
  panelMessages.delete(player.guildId);
@@ -175,9 +208,15 @@ client.on(Events.InteractionCreate,async i=>{
   if(!i.isChatInputCommand())return;
 
   // Discordの3秒制限対策。重い検索より先に必ずACKする。
-  await i.deferReply().catch(e=>{
-   if(e?.code!==40060&&e?.code!==10062)throw e;
-  });
+  try{
+   await i.deferReply();
+  }catch(e){
+   if(e?.code===40060||e?.code===10062){
+    console.warn(`Interaction ACK failed/expired: ${e.code}`);
+    return;
+   }
+   throw e;
+  }
 
   if(i.commandName==='play'){
    const vc=i.member?.voice?.channel;

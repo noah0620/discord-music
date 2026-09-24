@@ -56,3 +56,10 @@ Java 17以上が入っていれば `npm start` だけで Lavalink.jar を自動�
 ## 音が出ない場合
 この版では再生/再開ボタンを常時表示し、Lavalinkの playerStuck / playerException をコンソールへ出します。
 BOTに接続・発言権限があること、Discord側でBOTをミュートしていないことも確認してください。
+
+
+## 今回の修正
+- YouTubeがログイン/bot確認で音声取得を拒否した場合、同じ曲名・アーティストをSoundCloudで自動検索して代替再生します。
+- 再起動後も既存の再生パネルを再利用し、同じBOTのパネル重複を削除します。
+- `InteractionNotReplied` が出るACK処理を修正しました。
+- YouTube側の制限そのものを解除するものではないため、代替音源がない曲は再生できません。
