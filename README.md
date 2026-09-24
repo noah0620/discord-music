@@ -1,24 +1,18 @@
-# Discord MusicBot 音楽再生専用版
+# Discord MusicBot 3台同時起動版
 
-この版は元のMultiBotから自販機・天気・地震・RSS・ロール等を削除し、音楽再生だけにしたものです。
+同一機能の音楽BOTを、異なる3つのDiscord Botトークンで同時起動します。
 
 ## 機能
-- `/play` 曲名またはURLで再生
-- `/queue` キュー表示
-- `/skip` `/stop` `/pause` `/resume`
-- `/nowplaying`
-- `/volume`
-- `/leave` でBOTをVCから退出
-- 再生パネルの「🚪 退出」ボタン
-- BOTがいるVCから人間が全員退出したら自動退出
-- VoiceStateUpdateに加え15秒ごとの安全チェック
+/play /queue /skip /stop /pause /resume /nowplaying /volume /leave
 
-## 起動
-1. `.env.example` を `.env` にコピー
-2. `DISCORD_TOKEN` と `DISCORD_CLIENT_ID` を設定
-3. PowerShellでこのフォルダーを開く
-4. `npm install`
-5. `npm run deploy-commands`
-6. `npm start`
+各BOTは独立してボイスチャンネルへ参加できます。BOTがいるVCから人間が全員いなくなると、そのBOTだけ自動退出します。
 
-Node.js 20以上を使用してください。
+## 設定
+`.env.example` を `.env` にコピーし、BOT1～BOT3のトークンを設定してください。
+
+## 初回
+npm install
+npm run deploy-commands
+npm start
+
+以後は `npm start` または `起動.bat` で3台同時起動できます。
