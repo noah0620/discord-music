@@ -1,19 +1,29 @@
-# Discord MusicBot 3台 完成版
+# Discord MusicBot — 参照版ベース・音楽再生専用
 
-アップロードされた1台用 `Discord_MusicBot_音楽再生専用_自動退出版(1)` を基準に3台化した版です。
+アップロードされた `Discord_MultiBot_自販機管理パネルUI修正版 (2)(2)` の、
+実際に使われていた `youtube-dl-exec + ffmpeg-static + @discordjs/voice` の再生方式だけを抽出して、
+1台用に整理した版です。
 
-## 修正済み
-- 3台を1回の `npm start` で同時起動
-- 3台のVoiceConnectionをBOT IDごとに分離
-- `/play` の再生直前に音声ストリームURLを取得
-- `DiscordAPIError[40060]` 対策：操作ボタンをBOT IDごとに分離
-- `ephemeral` 非推奨警告対策：`MessageFlags.Ephemeral`
-- VCに人間が0人になったら、そのBOTだけ自動退出
-- `/leave` と退出ボタン
-- GitHub / Railway向けの簡潔構成
+## 残した機能
+- `/play` 曲名またはYouTube URL
+- 再生パネル
+- 一時停止 / 再開 / スキップ / 停止 / 退出
+- `/queue`
+- `/nowplaying`
+- `/volume`
+- VCに人間が0人になったら自動退出
+
+## 再生安定化
+- 音声ストリームURLは再生直前に取得
+- FFmpeg reconnect有効
+- VoiceConnectionがReadyになってから再生
+- Voice接続切断時の再接続待機
+- 15秒ごとの無人VC確認
+- Interaction 40060 / 10062でBOT全体が落ちないよう保護
+- `MessageFlags.Ephemeral` 使用
 
 ## PowerShell
-`.env.example` を `.env` にコピーし、3つのトークンを設定します。
+`.env.example` を `.env` にコピーし、BOTトークンを設定。
 
 ```powershell
 npm install
@@ -22,27 +32,10 @@ npm start
 ```
 
 ## Railway
-Variables に以下を設定:
-- MUSIC_BOT_TOKEN_1
-- MUSIC_BOT_TOKEN_2
-- MUSIC_BOT_TOKEN_3
+Variables:
+`DISCORD_TOKEN=BOTトークン`
 
-Start Command: `npm start`
+Start Command:
+`npm start`
 
-本物のTokenをGitHubへアップロードしないでください。
-
-
-## 再生パネル
-`/play 曲名またはURL` を実行すると、再生開始処理の後にDiscord上へ以下を表示します。
-
-- 🎵 BOT名
-- 曲名
-- YouTube URL
-- 再生中のVC
-- ⏸ 一時停止
-- ▶ 再開
-- ⏭ スキップ
-- ⏹ 停止
-- 🚪 退出
-
-3台それぞれのパネルはBOT IDで分離されているため、別BOTのボタンには反応しません。
+本物のトークンはGitHubへアップロードしないでください。
