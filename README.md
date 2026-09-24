@@ -48,3 +48,6 @@ Lavalink 4.2.2 + 公式 youtube-source 1.18.2 を使用します。
 複数のYouTubeクライアントを設定しています。ただしYouTube側の仕様・アクセス制限により、
 データセンターIPからのYouTube再生を100%保証するものではありません。
 曲名検索ではYouTubeが利用できない場合にSoundCloud検索を試します。
+
+## Windows 自動起動修正
+Java 17以上が入っていれば `npm start` だけで Lavalink.jar を自動取得・起動し、2333番ポートの準備完了後にDiscord BOTを起動します。
