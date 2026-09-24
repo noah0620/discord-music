@@ -1,5 +1,5 @@
 import {
- Client,GatewayIntentBits,Events,EmbedBuilder,ActionRowBuilder,ButtonBuilder,ButtonStyle
+ Client,GatewayIntentBits,Events,EmbedBuilder,ActionRowBuilder,ButtonBuilder,ButtonStyle,MessageFlags
 } from 'discord.js';
 import {
  joinVoiceChannel,createAudioPlayer,createAudioResource,AudioPlayerStatus,StreamType,
@@ -11,16 +11,40 @@ import youtubedl from 'youtube-dl-exec';
 
 export function startMusicBot(token,label){
  const client=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildVoiceStates]});
+
  const sessions=new Map();
+
+ // Discord interactionは1回しか初回応答できない。
+ // 3台のBOTが同じボタンイベントを受けても、対象BOT以外は応答しない。
+ async function safeReply(i, payload){
+  const data=typeof payload==='string'?{content:payload}:payload;
+  if(data.ephemeral){
+   delete data.ephemeral;
+   data.flags=MessageFlags.Ephemeral;
+  }
+  try{
+   if(i.deferred||i.replied) return await i.followUp(data);
+   return await i.reply(data);
+  }catch(e){
+   // 40060 = 既に別ハンドラ等で応答済み。BOTを落とさない。
+   if(e?.code===40060||e?.code===10062){
+    console.warn(`[${label}] interaction response skipped: ${e.code}`);
+    return null;
+   }
+   throw e;
+  }
+ }
+
 
  function key(guildId){return guildId;}
  function humans(ch){return ch?.members?.filter(m=>!m.user.bot).size??0;}
+ function buttonId(action){return `m:${client.user.id}:${action}`;}
  function buttons(){return new ActionRowBuilder().addComponents(
-  new ButtonBuilder().setCustomId('m:pause').setLabel('⏸ 一時停止').setStyle(ButtonStyle.Secondary),
-  new ButtonBuilder().setCustomId('m:resume').setLabel('▶ 再開').setStyle(ButtonStyle.Success),
-  new ButtonBuilder().setCustomId('m:skip').setLabel('⏭ スキップ').setStyle(ButtonStyle.Primary),
-  new ButtonBuilder().setCustomId('m:stop').setLabel('⏹ 停止').setStyle(ButtonStyle.Danger),
-  new ButtonBuilder().setCustomId('m:leave').setLabel('🚪 退出').setStyle(ButtonStyle.Danger)
+  new ButtonBuilder().setCustomId(buttonId('pause')).setLabel('⏸ 一時停止').setStyle(ButtonStyle.Secondary),
+  new ButtonBuilder().setCustomId(buttonId('resume')).setLabel('▶ 再開').setStyle(ButtonStyle.Success),
+  new ButtonBuilder().setCustomId(buttonId('skip')).setLabel('⏭ スキップ').setStyle(ButtonStyle.Primary),
+  new ButtonBuilder().setCustomId(buttonId('stop')).setLabel('⏹ 停止').setStyle(ButtonStyle.Danger),
+  new ButtonBuilder().setCustomId(buttonId('leave')).setLabel('🚪 退出').setStyle(ButtonStyle.Danger)
  );}
 
  // 参照ファイルと同じ youtube-dl-exec 方式。
@@ -133,20 +157,23 @@ export function startMusicBot(token,label){
  client.on(Events.InteractionCreate,async i=>{
   try{
    if(i.isButton()&&i.customId.startsWith('m:')){
+    const parts=i.customId.split(':');
+    // m:<botUserId>:<action> のボタンは、そのBOT本人だけが処理する
+    if(parts.length!==3||parts[1]!==client.user.id)return;
     const s=sameVC(i);
-    if(!s)return i.reply({content:'❌ このBOTと同じVCに参加してください。',ephemeral:true});
-    const a=i.customId.slice(2);
-    if(a==='pause'){s.player.pause();return i.reply({content:'⏸ 一時停止しました。',ephemeral:true});}
-    if(a==='resume'){s.player.unpause();return i.reply({content:'▶ 再開しました。',ephemeral:true});}
-    if(a==='skip'){s.player.stop(true);return i.reply({content:'⏭ スキップしました。',ephemeral:true});}
-    if(a==='stop'){s.queue.length=0;s.player.stop(true);return i.reply({content:'⏹ 停止しました。',ephemeral:true});}
-    if(a==='leave'){destroy(i.guildId);return i.reply({content:'🚪 退出しました。',ephemeral:true});}
+    if(!s)return safeReply(i,{content:'❌ このBOTと同じVCに参加してください。',ephemeral:true});
+    const a=parts[2];
+    if(a==='pause'){s.player.pause();return safeReply(i,{content:'⏸ 一時停止しました。',ephemeral:true});}
+    if(a==='resume'){s.player.unpause();return safeReply(i,{content:'▶ 再開しました。',ephemeral:true});}
+    if(a==='skip'){s.player.stop(true);return safeReply(i,{content:'⏭ スキップしました。',ephemeral:true});}
+    if(a==='stop'){s.queue.length=0;s.player.stop(true);return safeReply(i,{content:'⏹ 停止しました。',ephemeral:true});}
+    if(a==='leave'){destroy(i.guildId);return safeReply(i,{content:'🚪 退出しました。',ephemeral:true});}
    }
    if(!i.isChatInputCommand())return;
    const n=i.commandName;
    if(n==='play'){
     const vc=i.member?.voice?.channel;
-    if(!vc)return i.reply({content:'❌ 先にボイスチャンネルへ参加してください。',ephemeral:true});
+    if(!vc)return safeReply(i,{content:'❌ 先にボイスチャンネルへ参加してください。',ephemeral:true});
     await i.deferReply();
     try{
      const track=await resolveTrack(i.options.getString('query',true));
@@ -158,11 +185,11 @@ export function startMusicBot(token,label){
     return;
    }
    if(n==='leave'){
-    const s=sameVC(i);if(!s)return i.reply({content:'❌ このBOTと同じVCに参加してください。',ephemeral:true});
+    const s=sameVC(i);if(!s)return safeReply(i,{content:'❌ このBOTと同じVCに参加してください。',ephemeral:true});
     destroy(i.guildId);return i.reply('🚪 退出しました。');
    }
    const s=sameVC(i);
-   if(!s)return i.reply({content:'❌ このBOTと同じVCに参加してください。',ephemeral:true});
+   if(!s)return safeReply(i,{content:'❌ このBOTと同じVCに参加してください。',ephemeral:true});
    if(n==='queue')return i.reply([s.current&&`▶️ **${s.current.title}**`,...s.queue.map((x,j)=>`${j+1}. ${x.title}`)].filter(Boolean).join('\n')||'キューは空です。');
    if(n==='skip'){s.player.stop(true);return i.reply('⏭ スキップしました。');}
    if(n==='stop'){s.queue.length=0;s.player.stop(true);return i.reply('⏹ 停止しました。');}
@@ -177,7 +204,7 @@ export function startMusicBot(token,label){
   }catch(e){
    console.error(`[${label}]`,e);
    const msg={content:`❌ エラー: ${String(e.message||e).slice(0,1200)}`,ephemeral:true};
-   if(i.replied||i.deferred)await i.followUp(msg).catch(()=>{});else await i.reply(msg).catch(()=>{});
+   await safeReply(i,msg).catch(e=>console.error(`[${label}] reply error`,e));
   }
  });
  client.login(token).catch(e=>console.error(`❌ ${label} ログイン失敗: ${e.message}`));
