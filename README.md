@@ -1,41 +1,16 @@
-# Discord MusicBot — 参照版ベース・音楽再生専用
 
-アップロードされた `Discord_MultiBot_自販機管理パネルUI修正版 (2)(2)` の、
-実際に使われていた `youtube-dl-exec + ffmpeg-static + @discordjs/voice` の再生方式だけを抽出して、
-1台用に整理した版です。
 
-## 残した機能
-- `/play` 曲名またはYouTube URL
-- 再生パネル
-- 一時停止 / 再開 / スキップ / 停止 / 退出
-- `/queue`
-- `/nowplaying`
-- `/volume`
-- VCに人間が0人になったら自動退出
+## Windows `python3: No such file or directory` 修正
+この版では `youtube-dl-exec` のインストール時Pythonチェックを回避する設定を追加しました。
+ZIPに含まれていた `node_modules` は削除してあります。Windows上で必ず依存関係を入れ直してください。
 
-## 再生安定化
-- 音声ストリームURLは再生直前に取得
-- FFmpeg reconnect有効
-- VoiceConnectionがReadyになってから再生
-- Voice接続切断時の再接続待機
-- 15秒ごとの無人VC確認
-- Interaction 40060 / 10062でBOT全体が落ちないよう保護
-- `MessageFlags.Ephemeral` 使用
-
-## PowerShell
-`.env.example` を `.env` にコピーし、BOTトークンを設定。
-
+PowerShell:
 ```powershell
+$env:YOUTUBE_DL_SKIP_PYTHON_CHECK="1"
 npm install
-npm run deploy
 npm start
 ```
 
-## Railway
-Variables:
-`DISCORD_TOKEN=BOTトークン`
+または `Windows_初回セットアップ.ps1` → `Windows_起動.ps1` の順に実行してください。
 
-Start Command:
-`npm start`
-
-本物のトークンはGitHubへアップロードしないでください。
+既存フォルダへ上書きする場合は、古い `node_modules` を削除してから `npm install` してください。
