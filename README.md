@@ -1,51 +1,50 @@
-# Discord MusicBot - GitHub / Railway 完成版
+# Discord MusicBot — Jockie Music風 / Lavalink版
 
-音楽再生だけの1台用BOTです。
+従来の `yt-dlp → FFmpeg → Discord` 直結方式をやめ、
+**Discord Bot → Kazagumo/Shoukaku → Lavalink → Discord Voice** に変更した版です。
 
-## GitHubへアップロード
-このZIPの中身をリポジトリ直下へアップロードしてください。
-
-**`.env` とBOT TokenはGitHubへアップロードしないでください。**
+## 主な機能
+- `/play 曲名 / URL`
+- YouTube検索。失敗・空結果時はSoundCloud検索へフォールバック
+- プレイリストをキューへ一括追加
+- 再生パネル（停止・一時停止・再開・スキップ・シャッフル・退出）
+- `/queue`
+- `/nowplaying`
+- `/volume`
+- `/loop`（OFF / 1曲 / キュー）
+- `/shuffle`
+- VCが無人になったら自動退出
+- Discord Interaction 3秒制限対策
+- 1台用。安定後に同じLavalinkへ複数BOTを接続可能
 
 ## Railway
-GitHubリポジトリをRailwayへ接続し、Variablesに次を追加します。
+このZIPをGitHubリポジトリ直下へアップロードします。
 
-`DISCORD_TOKEN=BOTのトークン`
+Railway Variables:
+- `DISCORD_TOKEN` = Discord Bot Token
+- `LAVALINK_PASSWORD` = 好きな長いパスワード
 
-この版には `Dockerfile` と `railway.json` が入っています。
-RailwayのLinux環境へ `python3` を明示的に導入するため、
-以前の `env: python3: No such file or directory` を回避します。
-
-Start Command: `npm start`
+`LAVALINK_HOST` / `PORT` は同一コンテナ版では未設定でOKです。
+DockerfileがLavalinkとDiscord BOTを同じRailway Service内で起動します。
 
 ## Discordコマンド登録
-ローカルPowerShellで `.env` にTokenを設定して一度だけ:
+最初の1回だけローカルPowerShellで:
 
 ```powershell
+Copy-Item .env.example .env
+notepad .env
 npm install
 npm run deploy
 ```
 
-その後Railwayでは `npm start` だけで常時起動します。
+`.env` の `DISCORD_TOKEN` を設定してください。
 
-## 音楽機能
-- /play
-- /pause
-- /resume
-- /skip
-- /stop
-- /queue
-- /nowplaying
-- /volume
-- /leave
-- 再生パネル
-- VCが無人になったら自動退出
+## ローカル実行について
+`npm start` だけでは別途Lavalinkが必要です。
+RailwayではDockerfileがLavalinkも自動起動します。
 
-## 10062 / 40060 と YouTube取得エラー対策
-- `/play` はYouTube検索より前に `deferReply()` して、Discordの3秒制限に対応。
-- 10062 / 40060 が起きてもプロセスを終了しない。
-- YouTube取得は `android,web` player clientを試す構成。
-- YouTubeが `Sign in to confirm you're not a bot` を返した場合は、BOTを落とさずDiscordへ原因を表示。
-
-### 重要
-同じ `DISCORD_TOKEN` のBOTを **PCとRailwayで同時起動しないでください**。同じInteractionを2プロセスが受け取り、10062/40060の原因になります。Railway運用時はPC側の `npm start` を `Ctrl+C` で停止してください。
+## YouTubeについて
+Lavalink 4.2.2 + 公式 youtube-source 1.18.2 を使用します。
+複数のYouTubeクライアントを設定しています。ただしYouTube側の仕様・アクセス制限により、
+データセンターIPからのYouTube再生を100%保証するものではありません。
+曲名検索ではYouTubeが利用できない場合にSoundCloud検索を試します。

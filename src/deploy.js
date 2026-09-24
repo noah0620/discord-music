@@ -2,23 +2,27 @@ import 'dotenv/config';
 import { REST, Routes, SlashCommandBuilder } from 'discord.js';
 
 const token=process.env.DISCORD_TOKEN?.trim();
-if(!token) throw new Error('DISCORD_TOKEN が設定されていません。');
+if(!token) throw new Error('DISCORD_TOKEN がありません。');
 
 const commands=[
-  new SlashCommandBuilder().setName('play').setDescription('曲名またはURLから音楽を再生')
-    .addStringOption(o=>o.setName('query').setDescription('曲名 / YouTube URL').setRequired(true)),
-  new SlashCommandBuilder().setName('queue').setDescription('再生キューを表示'),
-  new SlashCommandBuilder().setName('skip').setDescription('現在の曲をスキップ'),
-  new SlashCommandBuilder().setName('stop').setDescription('再生を停止'),
-  new SlashCommandBuilder().setName('pause').setDescription('一時停止'),
-  new SlashCommandBuilder().setName('resume').setDescription('再生を再開'),
-  new SlashCommandBuilder().setName('nowplaying').setDescription('現在再生中の曲を表示'),
-  new SlashCommandBuilder().setName('volume').setDescription('音量を変更')
-    .addIntegerOption(o=>o.setName('percent').setDescription('1～200').setMinValue(1).setMaxValue(200).setRequired(true)),
-  new SlashCommandBuilder().setName('leave').setDescription('BOTをボイスチャンネルから退出')
+ new SlashCommandBuilder().setName('play').setDescription('曲名・URLを再生/キュー追加')
+  .addStringOption(o=>o.setName('query').setDescription('曲名 / YouTube・SoundCloud等のURL').setRequired(true)),
+ new SlashCommandBuilder().setName('pause').setDescription('一時停止'),
+ new SlashCommandBuilder().setName('resume').setDescription('再開'),
+ new SlashCommandBuilder().setName('skip').setDescription('スキップ'),
+ new SlashCommandBuilder().setName('stop').setDescription('停止してキューを消去'),
+ new SlashCommandBuilder().setName('queue').setDescription('キューを表示'),
+ new SlashCommandBuilder().setName('nowplaying').setDescription('現在の曲を表示'),
+ new SlashCommandBuilder().setName('volume').setDescription('音量変更')
+  .addIntegerOption(o=>o.setName('percent').setDescription('1～150').setMinValue(1).setMaxValue(150).setRequired(true)),
+ new SlashCommandBuilder().setName('loop').setDescription('ループ設定')
+  .addStringOption(o=>o.setName('mode').setDescription('ループモード').setRequired(true)
+   .addChoices({name:'OFF',value:'none'},{name:'1曲',value:'track'},{name:'キュー',value:'queue'})),
+ new SlashCommandBuilder().setName('shuffle').setDescription('キューをシャッフル'),
+ new SlashCommandBuilder().setName('leave').setDescription('VCから退出')
 ];
 
 const rest=new REST({version:'10'}).setToken(token);
 const me=await rest.get(Routes.user('@me'));
-await rest.put(Routes.applicationCommands(me.id),{body:commands.map(c=>c.toJSON())});
-console.log(`✅ ${me.username}: 音楽コマンド ${commands.length}個を登録しました。`);
+await rest.put(Routes.applicationCommands(me.id),{body:commands.map(x=>x.toJSON())});
+console.log(`✅ ${me.username}: ${commands.length}個の音楽コマンドを登録しました。`);
