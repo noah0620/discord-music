@@ -1,28 +1,32 @@
-# Discord Music BOT ×3
+# Discord MusicBot 3台 完成版
 
-3台とも同じ音楽再生機能で、トークンだけ別です。
+アップロードされた1台用 `Discord_MusicBot_音楽再生専用_自動退出版(1)` を基準に3台化した版です。
 
-## ローカル起動
-`.env.example` を `.env` にコピーして3つのトークンを設定。
+## 修正済み
+- 3台を1回の `npm start` で同時起動
+- 3台のVoiceConnectionをBOT IDごとに分離
+- `/play` の再生直前に音声ストリームURLを取得
+- `DiscordAPIError[40060]` 対策：操作ボタンをBOT IDごとに分離
+- `ephemeral` 非推奨警告対策：`MessageFlags.Ephemeral`
+- VCに人間が0人になったら、そのBOTだけ自動退出
+- `/leave` と退出ボタン
+- GitHub / Railway向けの簡潔構成
 
-```bash
+## PowerShell
+`.env.example` を `.env` にコピーし、3つのトークンを設定します。
+
+```powershell
 npm install
 npm run deploy
 npm start
 ```
 
-## GitHub
-アップロードするのは `src/`, `package.json`, `.gitignore`, `.env.example`, `README.md` だけでOKです。
-本物のBot TokenはGitHubへコミットしないでください。
+## Railway
+Variables に以下を設定:
+- MUSIC_BOT_TOKEN_1
+- MUSIC_BOT_TOKEN_2
+- MUSIC_BOT_TOKEN_3
 
-※ GitHub PagesはNode.js Discord Botの常時実行には使えません。
+Start Command: `npm start`
 
-
-## 40060修正
-3台同時起動時、同じボタンInteractionを複数BOTが処理しようとして
-`DiscordAPIError[40060]: Interaction has already been acknowledged` でプロセスが終了する問題を修正しました。
-
-- ボタンIDをBOTごとに分離
-- ephemeral指定をMessageFlags.Ephemeralへ変更
-- Interaction二重応答を安全に無視
-- 40060/10062でNode.jsプロセスが落ちないように保護
+本物のTokenをGitHubへアップロードしないでください。
