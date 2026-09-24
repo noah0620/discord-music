@@ -1,22 +1,18 @@
 import dotenv from 'dotenv';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createMusicBot } from './music-bot.js';
-
-const __filename=fileURLToPath(import.meta.url);
-const __dirname=path.dirname(__filename);
+import {fileURLToPath} from 'node:url';
+import {startMusicBot} from './music-bot.js';
+const __dirname=path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({path:path.resolve(__dirname,'../.env')});
-
 const bots=[
-  {label:'Music BOT 1',token:process.env.DISCORD_TOKEN_1},
-  {label:'Music BOT 2',token:process.env.DISCORD_TOKEN_2},
-  {label:'Music BOT 3',token:process.env.DISCORD_TOKEN_3}
+ ['Music BOT 1',process.env.MUSIC_BOT_TOKEN_1],
+ ['Music BOT 2',process.env.MUSIC_BOT_TOKEN_2],
+ ['Music BOT 3',process.env.MUSIC_BOT_TOKEN_3]
 ];
-let started=0;
-for(const bot of bots){
-  if(!bot.token?.trim()){ console.error(`❌ ${bot.label}: トークン未設定`); continue; }
-  createMusicBot({label:bot.label,token:bot.token.trim()});
-  started++;
+let n=0;
+for(const [label,token] of bots){
+ if(token?.trim()){startMusicBot(token.trim(),label);n++;}
+ else console.error(`⚠️ ${label}: トークン未設定`);
 }
-if(!started) throw new Error('.env に DISCORD_TOKEN_1～3 を設定してください。');
-console.log(`🎵 ${started}台のMusic BOTを起動します...`);
+if(!n)throw new Error('.env に MUSIC_BOT_TOKEN_1～3 を設定してください。');
+console.log(`🎵 ${n}台を起動します。`);

@@ -1,18 +1,21 @@
-# Discord MusicBot 3台同時起動版
+# Discord MusicBot 3台 再生修正版
 
-同一機能の音楽BOTを、異なる3つのDiscord Botトークンで同時起動します。
+アップロードされた `Discord_MultiBot_自販機管理パネルUI修正版(6).zip` の音楽再生処理を参照して作り直した版です。
 
-## 機能
-/play /queue /skip /stop /pause /resume /nowplaying /volume /leave
-
-各BOTは独立してボイスチャンネルへ参加できます。BOTがいるVCから人間が全員いなくなると、そのBOTだけ自動退出します。
-
-## 設定
-`.env.example` を `.env` にコピーし、BOT1～BOT3のトークンを設定してください。
+## 主な修正
+- 参照版と同じ `youtube-dl-exec + ffmpeg-static + @discordjs/voice` 構成
+- 3台同時起動時のVoiceConnection衝突を防ぐため、BOTごとに `group` を分離
+- キュー待ち中の音声URL期限切れを防ぐため「再生直前」にストリームURLを再取得
+- ffmpegのreconnect設定を追加
+- VC接続がReadyになるまで待ってから再生
+- VC内の人間が0人になったら自動退出
+- `/leave` と退出ボタンを実装
 
 ## 初回
-npm install
-npm run deploy-commands
-npm start
+1. `.env.example` を `.env` に変更
+2. 3つのトークンを設定
+3. `npm install`
+4. `npm run deploy-commands`
+5. `npm start`
 
-以後は `npm start` または `起動.bat` で3台同時起動できます。
+以降は `起動.bat` でも起動できます。
