@@ -77,3 +77,9 @@ BOTに接続・発言権限があること、Discord側でBOTをミュートし�
 ## Lavalink起動修正
 前版の application.yml にインデント崩れがあり、Lavalinkが起動できない問題を修正しました。
 OAuthは初期状態ではOFFです。まず通常起動を確認してください。
+
+
+## 検索・Interaction修正
+- `ytsearch匿名M` / `scsearch匿名M` のようにコロンが欠けていた検索識別子を修正。
+- Slash Commandは受信直後に必ずdeferReplyしてからLavalink検索を行います。
+- 応答処理は deferred/replied の状態を確認し、未ACKのInteractionへeditReplyしないよう修正。

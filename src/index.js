@@ -278,10 +278,17 @@ client.on(Events.InteractionCreate,async i=>{
 
 client.login(token);async function respond(i,payload){
  try{
-  if(i.deferred||i.replied) return await respond(i,payload);
+  if(i.deferred) return await respond(i,payload);
+  if(i.replied) return await i.followUp(payload);
   return await i.reply(payload);
  }catch(e){
-  if(e?.code===10062||e?.code===40060){console.warn(`Interaction ${e.code} ignored`);return;}
+  if(e?.code===10062||e?.code===40060){
+   console.warn(`Interaction ${e.code} ignored`);
+   return;
+  }
+  if(e?.code==='InteractionNotReplied'){
+   try{return await i.reply(payload);}catch{}
+  }
   console.error('Interaction response:',e);
  }
 }
