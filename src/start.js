@@ -59,8 +59,20 @@ console.log('🎵 Lavalinkを起動しています...');
 const lava=spawn('java',['-Dspring.cloud.config.enabled=false','-Dspring.cloud.config.import-check.enabled=false','-jar',jar,'--spring.config.location='+path.join(root,'application.yml')],{cwd:root,stdio:'inherit',env:{...process.env,LAVALINK_PASSWORD:password}});
 lava.on('error',e=>{console.error('❌ Lavalink起動失敗:',e);process.exit(1);});
 console.log('⏳ Lavalink :2333 を待っています...');
-if(!await waitLavalink()){
- console.error('❌ Lavalinkが90秒以内に起動しませんでした。上のLavalinkログを確認してください。');
+let lavaExited=false;
+let lavaExitCode=null;
+lava.once('exit',code=>{ lavaExited=true; lavaExitCode=code; });
+const waitResult=await Promise.race([
+ waitLavalink().then(ok=>ok?'ready':'timeout'),
+ new Promise(resolve=>{
+  const timer=setInterval(()=>{
+   if(lavaExited){ clearInterval(timer); resolve('exited'); }
+  },100);
+ })
+]);
+if(waitResult!=='ready'){
+ if(waitResult==='exited') console.error(`❌ Lavalinkが起動途中で終了しました。code=${lavaExitCode}`);
+ else console.error('❌ Lavalinkが90秒以内に起動しませんでした。上のLavalinkログを確認してください。');
  try{lava.kill();}catch{} process.exit(1);
 }
 console.log('✅ Lavalink起動完了');

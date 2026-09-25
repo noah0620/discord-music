@@ -72,3 +72,8 @@ BOTに接続・発言権限があること、Discord側でBOTをミュートし�
 - Interactionはコマンド受信直後にdeferして10062を抑制します。
 - YouTube OAuthは既定でOFFです。必要な場合だけ `.env` の `YOUTUBE_OAUTH_ENABLED=true` にしてください。
 - youtube-source公式の注意どおり、OAuthは万能ではなくアカウント制限の可能性があります。メインアカウントの利用は推奨されません。
+
+
+## Lavalink起動修正
+前版の application.yml にインデント崩れがあり、Lavalinkが起動できない問題を修正しました。
+OAuthは初期状態ではOFFです。まず通常起動を確認してください。

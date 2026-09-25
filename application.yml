@@ -2,8 +2,8 @@ spring:
   cloud:
     config:
       enabled: false
-    import-check:
-      enabled: false
+      import-check:
+        enabled: false
 
 server:
   port: 2333
@@ -11,11 +11,11 @@ server:
 
 lavalink:
   server:
+    password: "${LAVALINK_PASSWORD:change-me}"
     bufferDurationMs: 400
     frameBufferDurationMs: 5000
     opusEncodingQuality: 10
     resamplingQuality: LOW
-    password: "${LAVALINK_PASSWORD:change-me}"
     sources:
       youtube: false
       bandcamp: true
@@ -47,17 +47,16 @@ plugins:
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     clients:
-          - TV
-          - WEB
-          - MWEB
-          - WEBEMBEDDED
-          - ANDROID_VR
-        oauth:
-          enabled: ${YOUTUBE_OAUTH_ENABLED:false}
-          refreshToken: ${YOUTUBE_REFRESH_TOKEN:}
+      - MUSIC
+      - ANDROID_VR
+      - WEB
+      - WEBEMBEDDED
+      - TV
+    oauth:
+      enabled: ${YOUTUBE_OAUTH_ENABLED:false}
+
 logging:
   level:
     root: INFO
     lavalink: INFO
-
-      dev.lavalink.youtube.http.YoutubeOauth2Handler: INFO
+    dev.lavalink.youtube.http.YoutubeOauth2Handler: INFO
