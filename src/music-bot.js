@@ -9,6 +9,7 @@ import {spawn} from 'node:child_process';
 import ffmpegPath from 'ffmpeg-static';
 import youtubedl from 'youtube-dl-exec';
 import play from 'play-dl';
+import fs from 'node:fs';
 
 export function startMusicBot(token,label){
  const client=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildVoiceStates]});
@@ -24,7 +25,8 @@ export function startMusicBot(token,label){
    data.flags=MessageFlags.Ephemeral;
   }
   try{
-   if(i.deferred||i.replied) return await i.followUp(data);
+   if(i.deferred) return await i.editReply(data);
+   if(i.replied) return await i.followUp(data);
    return await i.reply(data);
   }catch(e){
    // 40060 = 既に別ハンドラ等で応答済み。BOTを落とさない。
@@ -68,9 +70,10 @@ export function startMusicBot(token,label){
   return {title:v.title||input,url:v.url,duration:Number(v.durationInSec)||0};
  }
  async function freshStreamUrl(pageUrl){
-  const stream=await youtubedl(pageUrl,{
-   getUrl:true,format:'bestaudio/best',noPlaylist:true,noWarnings:true
-  });
+  const cookie=process.env.YOUTUBE_COOKIE||'cookies.txt';
+  const opts={getUrl:true,format:'bestaudio/best',noPlaylist:true,noWarnings:true};
+  if(fs.existsSync(cookie))opts.cookies=cookie;
+  const stream=await youtubedl(pageUrl,opts);
   const u=String(stream).trim().split(/\r?\n/).find(x=>/^https?:\/\//.test(x));
   if(!u)throw new Error('音声ストリームURLを取得できませんでした。');
   return u;
@@ -164,6 +167,8 @@ export function startMusicBot(token,label){
  client.on(Events.InteractionCreate,async i=>{
   try{
    if(i.isButton()&&i.customId.startsWith('m:')){
+    try{await i.deferReply({flags:MessageFlags.Ephemeral});}
+    catch(e){if(e?.code===10062||e?.code===40060)return;throw e;}
     const parts=i.customId.split(':');
     // m:<botUserId>:<action> のボタンは、そのBOT本人だけが処理する
     if(parts.length!==3||parts[1]!==client.user.id)return;
@@ -177,11 +182,12 @@ export function startMusicBot(token,label){
     if(a==='leave'){destroy(i.guildId);return safeReply(i,{content:'🚪 退出しました。',ephemeral:true});}
    }
    if(!i.isChatInputCommand())return;
+   try{await i.deferReply({flags:MessageFlags.Ephemeral});}
+   catch(e){if(e?.code===10062||e?.code===40060)return;throw e;}
    const n=i.commandName;
    if(n==='play'){
     const vc=i.member?.voice?.channel;
-    if(!vc)return safeReply(i,{content:'❌ 先にボイスチャンネルへ参加してください。',ephemeral:true});
-    await i.deferReply();
+    if(!vc)return safeReply(i,{content:'❌ 先にボイスチャンネルへ参加してください。'});
     try{
      const track=await resolveTrack(i.options.getString('query',true));
      const s=await join(i.guild,vc);
@@ -193,20 +199,20 @@ export function startMusicBot(token,label){
    }
    if(n==='leave'){
     const s=sameVC(i);if(!s)return safeReply(i,{content:'❌ このBOTと同じVCに参加してください。',ephemeral:true});
-    destroy(i.guildId);return i.reply('🚪 退出しました。');
+    destroy(i.guildId);return safeReply(i,'🚪 退出しました。');
    }
    const s=sameVC(i);
    if(!s)return safeReply(i,{content:'❌ このBOTと同じVCに参加してください。',ephemeral:true});
-   if(n==='queue')return i.reply([s.current&&`▶️ **${s.current.title}**`,...s.queue.map((x,j)=>`${j+1}. ${x.title}`)].filter(Boolean).join('\n')||'キューは空です。');
-   if(n==='skip'){s.player.stop(true);return i.reply('⏭ スキップしました。');}
-   if(n==='stop'){s.queue.length=0;s.player.stop(true);return i.reply('⏹ 停止しました。');}
-   if(n==='pause'){s.player.pause();return i.reply('⏸ 一時停止しました。');}
-   if(n==='resume'){s.player.unpause();return i.reply('▶ 再開しました。');}
-   if(n==='nowplaying')return i.reply(s.current?`🎵 **${s.current.title}**\n${s.current.url}`:'現在再生していません。');
+   if(n==='queue')return safeReply(i,[s.current&&`▶️ **${s.current.title}**`,...s.queue.map((x,j)=>`${j+1}. ${x.title}`)].filter(Boolean).join('\n')||'キューは空です。');
+   if(n==='skip'){s.player.stop(true);return safeReply(i,'⏭ スキップしました。');}
+   if(n==='stop'){s.queue.length=0;s.player.stop(true);return safeReply(i,'⏹ 停止しました。');}
+   if(n==='pause'){s.player.pause();return safeReply(i,'⏸ 一時停止しました。');}
+   if(n==='resume'){s.player.unpause();return safeReply(i,'▶ 再開しました。');}
+   if(n==='nowplaying')return safeReply(i,s.current?`🎵 **${s.current.title}**\n${s.current.url}`:'現在再生していません。');
    if(n==='volume'){
     s.volume=i.options.getInteger('percent',true);
     s.player.state.resource?.volume?.setVolume(s.volume/100);
-    return i.reply(`🔊 音量を ${s.volume}% に変更しました。`);
+    return safeReply(i,`🔊 音量を ${s.volume}% に変更しました。`);
    }
   }catch(e){
    console.error(`[${label}]`,e);
